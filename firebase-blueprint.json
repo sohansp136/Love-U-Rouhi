@@ -1,0 +1,151 @@
+{
+  "entities": {
+    "CoupleProfile": {
+      "title": "CoupleProfile",
+      "description": "Profile and anniversary details of the couple",
+      "type": "object",
+      "properties": {
+        "husbandName": { "type": "string" },
+        "wifeName": { "type": "string" },
+        "anniversaryDate": { "type": "string" },
+        "anniversaryYearNumber": { "type": "number" },
+        "nicknameForHer": { "type": "string" },
+        "heroHeadline": { "type": "string" },
+        "heroSubheadline": { "type": "string" },
+        "heroPhotoUrl": { "type": "string" },
+        "romanticQuote": { "type": "string" },
+        "quoteAuthor": { "type": "string" },
+        "husbandPin": { "type": "string" }
+      },
+      "required": ["husbandName", "wifeName", "anniversaryDate"]
+    },
+    "LoveRequest": {
+      "title": "LoveRequest",
+      "description": "Romantic love coupons and requests requested by wife or responded by husband",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "note": { "type": "string" },
+        "category": { "type": "string" },
+        "requestedAt": { "type": "string" },
+        "status": { "type": "string" },
+        "husbandReply": { "type": "string" },
+        "approvedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "status"]
+    },
+    "MemoryItem": {
+      "title": "MemoryItem",
+      "description": "A scrapbook memory with date, title, photo, and caption",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "location": { "type": "string" },
+        "caption": { "type": "string" },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "favorite": { "type": "boolean" }
+      },
+      "required": ["id", "title", "date"]
+    },
+    "LoveLetter": {
+      "title": "LoveLetter",
+      "description": "Sealed 'Open When' love letters with wax seal prompt and romantic notes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "sealedPrompt": { "type": "string" },
+        "sealColor": { "type": "string" },
+        "dateWritten": { "type": "string" },
+        "signoff": { "type": "string" },
+        "isOpened": { "type": "boolean" }
+      },
+      "required": ["id", "title", "sealedPrompt"]
+    },
+    "VoiceTrack": {
+      "title": "VoiceTrack",
+      "description": "Romantic voice cassette recording or audio dedication",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "authorName": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "audioUrl": { "type": "string" },
+        "durationSeconds": { "type": "number" },
+        "recordedDate": { "type": "string" },
+        "note": { "type": "string" },
+        "side": { "type": "string" }
+      },
+      "required": ["id", "title", "audioUrl"]
+    },
+    "BucketListItem": {
+      "title": "BucketListItem",
+      "description": "A shared bucket list dream or goal for the couple",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "note": { "type": "string" },
+        "category": { "type": "string" },
+        "targetTime": { "type": "string" },
+        "isCompleted": { "type": "boolean" },
+        "completedAt": { "type": "string" },
+        "addedBy": { "type": "string" }
+      },
+      "required": ["id", "title", "isCompleted"]
+    },
+    "LoveMessage": {
+      "title": "LoveMessage",
+      "description": "Realtime messenger chat messages and photo attachments between husband and wife",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "senderName": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "text": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "senderRole", "senderName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/couple_profile/{profileId}": {
+      "schema": "CoupleProfile",
+      "description": "Stores the couple's shared anniversary profile details"
+    },
+    "/love_requests/{requestId}": {
+      "schema": "LoveRequest",
+      "description": "Realtime love coupons and cute requests between the couple"
+    },
+    "/memories/{memoryId}": {
+      "schema": "MemoryItem",
+      "description": "Scrapbook photo memories and milestones"
+    },
+    "/letters/{letterId}": {
+      "schema": "LoveLetter",
+      "description": "Wax sealed open-when love letters"
+    },
+    "/voice_tracks/{trackId}": {
+      "schema": "VoiceTrack",
+      "description": "Voice cassette audio recordings"
+    },
+    "/bucket_list/{itemId}": {
+      "schema": "BucketListItem",
+      "description": "Shared couple dreams and bucket list achievements"
+    },
+    "/love_messages/{messageId}": {
+      "schema": "LoveMessage",
+      "description": "Realtime messenger chat messages between the couple"
+    }
+  }
+}

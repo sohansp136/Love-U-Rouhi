@@ -1,0 +1,6 @@
+{
+  "name": "Forever & Always - Anniversary Keepsake",
+  "description": "An intimate, personal anniversary gift web app designed for your wife, featuring our journey timeline, wax-sealed love letters, sweet memories, love coupons, and customizable moments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
