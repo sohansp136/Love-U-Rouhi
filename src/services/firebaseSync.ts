@@ -255,26 +255,38 @@ export function initFirebaseRealtimeSync(callbacks: FirebaseSyncCallbacks) {
   // 8. Love Messages (Couples Realtime Messenger) Listener
   const messagesCol = collection(db, 'love_messages');
   const unsubMessages = onSnapshot(messagesCol, (snap) => {
-    if (!snap.empty) {
-      const list: LoveMessage[] = snap.docs.map((d) => {
-        const item = d.data();
-        return {
-          id: item.id || d.id,
-          senderRole: item.senderRole || 'husband',
-          senderName: item.senderName || '',
-          recipientName: item.recipientName || '',
-          text: item.text || '',
-          imageUrl: item.imageUrl || '',
-          images: item.images || (item.imageUrl ? [item.imageUrl] : []),
-          createdAt: item.createdAt || '',
-          reactions: item.reactions || {}
-        };
-      });
-      // Sort chronologically
-      list.sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1));
-      callbacks.onLoveMessagesChange?.(list);
-      callbacks.onStatusChange({ isConnected: true, isSyncing: false, lastSyncedAt: new Date() });
-    }
+    const list: LoveMessage[] = snap.docs.map((d) => {
+      const item = d.data();
+      const rawTs = item.timestamp;
+      const ts = typeof rawTs === 'number'
+        ? rawTs
+        : (item.serverTime?.toMillis ? item.serverTime.toMillis() : (item.createdAt ? new Date(item.createdAt).getTime() : 0));
+
+      return {
+        id: item.id || d.id,
+        senderRole: item.senderRole || 'husband',
+        senderName: item.senderName || '',
+        recipientName: item.recipientName || '',
+        text: item.text || '',
+        imageUrl: item.imageUrl || '',
+        images: item.images || (item.imageUrl ? [item.imageUrl] : []),
+        createdAt: item.createdAt || new Date(ts || Date.now()).toISOString(),
+        timestamp: ts || Date.now(),
+        displayTime: item.displayTime || '',
+        reactions: item.reactions || {},
+        replyTo: item.replyTo ? {
+          id: item.replyTo.id || '',
+          senderName: item.replyTo.senderName || '',
+          senderRole: item.replyTo.senderRole || 'husband',
+          text: item.replyTo.text || '',
+          imageUrl: item.replyTo.imageUrl || ''
+        } : undefined
+      };
+    });
+    // Sort strictly chronologically ascending (earliest messages first, newer at bottom)
+    list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    callbacks.onLoveMessagesChange?.(list);
+    callbacks.onStatusChange({ isConnected: true, isSyncing: false, lastSyncedAt: new Date() });
   }, (err) => {
     handleFirestoreError(err, OperationType.GET, 'love_messages');
   });
@@ -480,14 +492,32 @@ export async function addLoveMessageToFirestore(message: LoveMessage) {
       ? message.images
       : (message.imageUrl ? [message.imageUrl] : []);
 
-    await setDoc(doc(db, 'love_messages', message.id), {
-      ...message,
+    const cleanData: Record<string, any> = {
+      id: message.id,
+      senderRole: message.senderRole,
+      senderName: message.senderName || '',
+      recipientName: message.recipientName || '',
+      text: message.text || '',
       imageUrl: message.imageUrl || imagesList[0] || '',
       images: imagesList,
       reactions: message.reactions || {},
       createdAt: message.createdAt || new Date().toISOString(),
+      timestamp: message.timestamp || Date.now(),
+      displayTime: message.displayTime || '',
       updatedAt: serverTimestamp()
-    });
+    };
+
+    if (message.replyTo) {
+      cleanData.replyTo = {
+        id: message.replyTo.id,
+        senderName: message.replyTo.senderName || '',
+        senderRole: message.replyTo.senderRole || 'husband',
+        text: message.replyTo.text || '',
+        imageUrl: message.replyTo.imageUrl || ''
+      };
+    }
+
+    await setDoc(doc(db, 'love_messages', message.id), cleanData);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
   }

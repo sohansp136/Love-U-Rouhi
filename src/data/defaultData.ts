@@ -92,7 +92,9 @@ export const initialLoveMessages: LoveMessage[] = [
     senderName: 'Your Loving Husband',
     recipientName: 'My Dearest Wife',
     text: 'Welcome to our private love chat room, my darling! ❤️ Here we can send sweet notes, whispers, and photos whenever we think of each other.',
-    createdAt: 'Today',
+    createdAt: new Date().toISOString(),
+    timestamp: Date.now() - 60000,
+    displayTime: 'Just now',
     reactions: { '❤️': 1 }
   }
 ];

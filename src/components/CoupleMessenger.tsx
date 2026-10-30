@@ -12,8 +12,10 @@ import {
   Clock,
   CheckCircle2,
   ShieldCheck,
-  User,
-  HeartHandshake
+  Reply,
+  CornerDownRight,
+  HeartHandshake,
+  AlertTriangle
 } from 'lucide-react';
 import { LoveMessage, UserRole } from '../types';
 import { compressImage } from '../utils/imageCompressor';
@@ -23,7 +25,7 @@ interface CoupleMessengerProps {
   wifeName: string;
   husbandName: string;
   currentRole: UserRole;
-  onSendMessage: (msg: Omit<LoveMessage, 'id' | 'createdAt'>) => void;
+  onSendMessage: (msg: Omit<LoveMessage, 'id' | 'createdAt' | 'timestamp'>) => void;
   onDeleteMessage: (id: string) => void;
   onReactMessage: (id: string, emoji: string) => void;
 }
@@ -39,6 +41,38 @@ const QUICK_ROMANTIC_PROMPTS = [
 ];
 
 const ROMANTIC_EMOJIS = ['❤️', '💖', '😘', '🥰', '🌹', '💌', '💍', '✨', '☕', '🌸'];
+
+/**
+ * Formats a message timestamp into human-readable Bengali/English format
+ */
+function formatMessageTime(timestamp: number): string {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Formats date for grouping headers
+ */
+function formatDayHeader(timestamp: number): string {
+  if (!timestamp) return 'আজকে';
+  const messageDate = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (messageDate.toDateString() === today.toDateString()) {
+    return 'আজকে • Today';
+  } else if (messageDate.toDateString() === yesterday.toDateString()) {
+    return 'গতকাল • Yesterday';
+  } else {
+    return messageDate.toLocaleDateString('bn-BD', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+}
 
 export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
   messages,
@@ -65,12 +99,25 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  // Message Reply State
+  const [replyingTo, setReplyingTo] = useState<LoveMessage | null>(null);
+
+  // Message Delete Confirmation Modal State
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+
   // Lightbox full image modal
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
-  // Auto-scroll chat feed
+  // References
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // Sort messages strictly by monotonic timestamp ascending (earliest top, newest bottom)
+  const sortedMessages = [...messages].sort(
+    (a, b) => (a.timestamp || 0) - (b.timestamp || 0)
+  );
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -78,7 +125,7 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
 
   useEffect(() => {
     scrollToBottom('smooth');
-  }, [messages.length]);
+  }, [sortedMessages.length]);
 
   // Handle multi-image file select
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,6 +158,29 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Reply handler
+  const handleStartReply = (msg: LoveMessage) => {
+    setReplyingTo(msg);
+    textareaRef.current?.focus();
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  // Scroll to original replied message
+  const handleScrollToReplied = (id: string) => {
+    const target = messageRefs.current[id];
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('ring-2', 'ring-rose-500', 'transition-all');
+      setTimeout(() => {
+        target.classList.remove('ring-2', 'ring-rose-500');
+      }, 1800);
+    }
+  };
+
+  // Send message
   const handleSend = () => {
     const trimmed = inputText.trim();
     if (!trimmed && selectedImages.length === 0) return;
@@ -120,6 +190,16 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
     const senderName = activeSenderRole === 'wife' ? wifeName : husbandName;
     const recipientName = activeSenderRole === 'wife' ? husbandName : wifeName;
 
+    const replyPayload = replyingTo
+      ? {
+          id: replyingTo.id,
+          senderName: replyingTo.senderName || (replyingTo.senderRole === 'wife' ? wifeName : husbandName),
+          senderRole: replyingTo.senderRole,
+          text: replyingTo.text || '',
+          imageUrl: replyingTo.imageUrl || (replyingTo.images && replyingTo.images[0]) || ''
+        }
+      : undefined;
+
     onSendMessage({
       senderRole: activeSenderRole,
       senderName,
@@ -127,11 +207,13 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
       text: trimmed || undefined,
       imageUrl: selectedImages[0] || undefined,
       images: selectedImages.length > 0 ? selectedImages : undefined,
-      reactions: {}
+      reactions: {},
+      replyTo: replyPayload
     });
 
     setInputText('');
     setSelectedImages([]);
+    setReplyingTo(null);
     setShowEmojiPicker(false);
     setIsSending(false);
   };
@@ -149,10 +231,10 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
 
   const handleQuickPrompt = (prompt: string) => {
     setInputText(prompt);
+    textareaRef.current?.focus();
   };
 
   const activeSenderName = activeSenderRole === 'wife' ? wifeName : husbandName;
-  const partnerName = activeSenderRole === 'wife' ? husbandName : wifeName;
 
   return (
     <section id="couple-messenger" className="scroll-mt-24 space-y-6">
@@ -168,7 +250,7 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
             Sweet Whispers & Love Notes
           </h2>
           <p className="text-sm text-stone-400 max-w-2xl mt-1.5">
-            তোমাদের দুজনের একান্ত বার্তালাপ। যেকোনো সময় যেকোনো জায়গা থেকে মিষ্টি কথা, ছবি কিংবা অনুভূতির চিরকুট পাঠাও। অপরজন তা সাথে সাথে দেখতে পারবে।
+            তোমাদের দুজনের একান্ত বার্তালাপ। যেকোনো সময় মিষ্টি কথা, ছবি বা অনুভূতির চিরকুট পাঠাও। অপরজন তা সাথে সাথে দেখতে পারবে এবং সরাসরি রিপ্লাই করতে পারবে।
           </p>
         </div>
 
@@ -214,13 +296,13 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
           </div>
           <div className="flex items-center gap-2 text-[11px] text-stone-400">
             <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
-            <span>লাইভ ফায়ারস্টোর সিঙ্ক • এন্ড-টু-এন্ড সিকিউর</span>
+            <span>সরাসরি ক্লাউড সিঙ্ক • সঠিক টাইম ও সিকিউর</span>
           </div>
         </div>
 
         {/* Messages Stream Container */}
-        <div className="p-4 sm:p-6 min-h-[360px] max-h-[560px] overflow-y-auto space-y-4 bg-stone-950/40 selection:bg-rose-500/30">
-          {messages.length === 0 ? (
+        <div className="p-4 sm:p-6 min-h-[360px] max-h-[580px] overflow-y-auto space-y-5 bg-stone-950/40 selection:bg-rose-500/30">
+          {sortedMessages.length === 0 ? (
             <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-dashed border-stone-800/80 rounded-2xl">
               <div className="w-14 h-14 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-3 shadow-inner">
                 <HeartHandshake className="w-7 h-7" />
@@ -245,147 +327,206 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
               </button>
             </div>
           ) : (
-            messages.map((msg) => {
+            sortedMessages.map((msg, idx) => {
               const isSenderMe = msg.senderRole === activeSenderRole;
               const isWifeSender = msg.senderRole === 'wife';
+              const formattedTime = formatMessageTime(msg.timestamp);
+
+              // Date Header separation check
+              const prevMsg = idx > 0 ? sortedMessages[idx - 1] : null;
+              const showDateHeader =
+                !prevMsg ||
+                new Date(msg.timestamp).toDateString() !==
+                  new Date(prevMsg.timestamp).toDateString();
 
               return (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col ${
-                    isSenderMe ? 'items-end' : 'items-start'
-                  } group transition-all`}
-                >
-                  {/* Sender Name & Timestamp badge */}
-                  <div
-                    className={`flex items-center gap-1.5 text-[10px] text-stone-400 mb-1 px-1 ${
-                      isSenderMe ? 'flex-row-reverse' : 'flex-row'
-                    }`}
-                  >
-                    <span className="font-medium text-stone-300">
-                      {isWifeSender ? '👰 ' + (msg.senderName || wifeName) : '🤵 ' + (msg.senderName || husbandName)}
-                    </span>
-                    <span>•</span>
-                    <span className="text-stone-400">{msg.createdAt}</span>
-                    {/* Delete button (hover) */}
-                    <button
-                      onClick={() => {
-                        if (confirm('এই মেসেজটি ডিলিট করতে চান?')) {
-                          onDeleteMessage(msg.id);
-                        }
-                      }}
-                      className="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-rose-400 transition-opacity p-0.5 rounded cursor-pointer ml-1"
-                      title="ডিলিট করুন"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
+                <React.Fragment key={msg.id}>
+                  {/* Day Divider */}
+                  {showDateHeader && (
+                    <div className="flex items-center justify-center my-3">
+                      <span className="px-3 py-1 rounded-full bg-stone-900 border border-stone-800 text-[11px] text-stone-400 font-medium tracking-wide shadow-sm">
+                        {formatDayHeader(msg.timestamp)}
+                      </span>
+                    </div>
+                  )}
 
-                  {/* Message Bubble */}
                   <div
-                    className={`relative max-w-[85%] sm:max-w-md md:max-w-lg rounded-3xl p-3.5 sm:p-4 shadow-md transition-all ${
-                      isSenderMe
-                        ? isWifeSender
-                          ? 'bg-gradient-to-br from-rose-600 via-rose-500 to-pink-600 text-white rounded-tr-none shadow-rose-950/40'
-                          : 'bg-gradient-to-br from-stone-800 via-stone-800 to-stone-900 border border-rose-500/20 text-stone-100 rounded-tr-none shadow-black/50'
-                        : isWifeSender
-                        ? 'bg-stone-900 border border-rose-500/30 text-rose-50 rounded-tl-none shadow-black/40'
-                        : 'bg-stone-900 border border-blue-500/30 text-stone-100 rounded-tl-none shadow-black/40'
-                    }`}
+                    ref={(el) => {
+                      messageRefs.current[msg.id] = el;
+                    }}
+                    className={`flex flex-col ${
+                      isSenderMe ? 'items-end' : 'items-start'
+                    } group transition-all`}
                   >
-                    {/* Photos Grid if any */}
-                    {msg.images && msg.images.length > 0 && (
-                      <div
-                        className={`mb-2.5 grid gap-2 rounded-2xl overflow-hidden ${
-                          msg.images.length === 1
-                            ? 'grid-cols-1'
-                            : msg.images.length === 2
-                            ? 'grid-cols-2'
-                            : 'grid-cols-2 sm:grid-cols-3'
-                        }`}
-                      >
-                        {msg.images.map((img, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => setLightboxImage(img)}
-                            className="relative group/img overflow-hidden rounded-xl bg-stone-950 aspect-video cursor-zoom-in"
-                          >
-                            <img
-                              src={img}
-                              alt="Attachment"
-                              className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                              <Maximize2 className="w-4 h-4 text-white drop-shadow" />
-                            </div>
+                    {/* Sender Name & Timestamp badge */}
+                    <div
+                      className={`flex items-center gap-1.5 text-[10px] text-stone-400 mb-1 px-1.5 ${
+                        isSenderMe ? 'flex-row-reverse' : 'flex-row'
+                      }`}
+                    >
+                      <span className="font-medium text-stone-300">
+                        {isWifeSender
+                          ? '👰 ' + (msg.senderName || wifeName)
+                          : '🤵 ' + (msg.senderName || husbandName)}
+                      </span>
+                      <span>•</span>
+                      <span className="text-stone-400 font-mono">{formattedTime}</span>
+                    </div>
+
+                    {/* Message Bubble */}
+                    <div
+                      className={`relative max-w-[88%] sm:max-w-md md:max-w-lg rounded-3xl p-3.5 sm:p-4 shadow-md transition-all ${
+                        isSenderMe
+                          ? isWifeSender
+                            ? 'bg-gradient-to-br from-rose-600 via-rose-500 to-pink-600 text-white rounded-tr-none shadow-rose-950/40'
+                            : 'bg-gradient-to-br from-stone-800 via-stone-800 to-stone-900 border border-rose-500/20 text-stone-100 rounded-tr-none shadow-black/50'
+                          : isWifeSender
+                          ? 'bg-stone-900 border border-rose-500/30 text-rose-50 rounded-tl-none shadow-black/40'
+                          : 'bg-stone-900 border border-blue-500/30 text-stone-100 rounded-tl-none shadow-black/40'
+                      }`}
+                    >
+                      {/* Quoted Replying Header if this message is a reply */}
+                      {msg.replyTo && (
+                        <div
+                          onClick={() => handleScrollToReplied(msg.replyTo!.id)}
+                          className="mb-2.5 p-2 rounded-xl bg-black/30 border-l-4 border-amber-400/80 cursor-pointer hover:bg-black/40 transition-colors text-left flex items-start gap-2"
+                          title="মূল বার্তাটিতে যান"
+                        >
+                          <CornerDownRight className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[10px] font-semibold text-amber-300 block truncate">
+                              {msg.replyTo.senderName || 'Partner'}
+                            </span>
+                            {msg.replyTo.text ? (
+                              <p className="text-[11px] text-stone-300 line-clamp-1 italic">
+                                "{msg.replyTo.text}"
+                              </p>
+                            ) : msg.replyTo.imageUrl ? (
+                              <span className="text-[11px] text-stone-300 flex items-center gap-1 italic">
+                                📷 [একটি ছবি]
+                              </span>
+                            ) : null}
                           </div>
+                        </div>
+                      )}
+
+                      {/* Photos Grid if any */}
+                      {msg.images && msg.images.length > 0 && (
+                        <div
+                          className={`mb-2.5 grid gap-2 rounded-2xl overflow-hidden ${
+                            msg.images.length === 1
+                              ? 'grid-cols-1'
+                              : msg.images.length === 2
+                              ? 'grid-cols-2'
+                              : 'grid-cols-2 sm:grid-cols-3'
+                          }`}
+                        >
+                          {msg.images.map((img, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => setLightboxImage(img)}
+                              className="relative group/img overflow-hidden rounded-xl bg-stone-950 aspect-video cursor-zoom-in"
+                            >
+                              <img
+                                src={img}
+                                alt="Attachment"
+                                className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                              />
+                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                <Maximize2 className="w-4 h-4 text-white drop-shadow" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Fallback single imageUrl if images array not populated */}
+                      {(!msg.images || msg.images.length === 0) && msg.imageUrl && (
+                        <div
+                          onClick={() => setLightboxImage(msg.imageUrl!)}
+                          className="mb-2.5 relative group/img overflow-hidden rounded-xl bg-stone-950 aspect-video max-h-60 cursor-zoom-in"
+                        >
+                          <img
+                            src={msg.imageUrl}
+                            alt="Attachment"
+                            className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                            <Maximize2 className="w-4 h-4 text-white drop-shadow" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Text Message Content */}
+                      {msg.text && (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words font-sans">
+                          {msg.text}
+                        </p>
+                      )}
+
+                      {/* Reactions Bar inside bubble */}
+                      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 mt-2.5 pt-2 border-t border-white/10">
+                          {Object.entries(msg.reactions).map(([emoji, count]) =>
+                            count > 0 ? (
+                              <button
+                                key={emoji}
+                                onClick={() => onReactMessage(msg.id, emoji)}
+                                className="px-2 py-0.5 rounded-full text-xs bg-black/30 hover:bg-black/40 border border-white/10 flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <span>{emoji}</span>
+                                <span className="text-[10px] font-semibold">{count}</span>
+                              </button>
+                            ) : null
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Bar (Reply, Delete, Reactions) - CLEARLY VISIBLE on both mobile and desktop! */}
+                    <div
+                      className={`flex items-center gap-2 mt-1.5 px-1 ${
+                        isSenderMe ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      {/* Reply Button */}
+                      <button
+                        onClick={() => handleStartReply(msg)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] text-stone-400 hover:text-stone-200 hover:bg-stone-800/80 transition-colors cursor-pointer"
+                        title="এই মেসেজটির রিপ্লাই দিন"
+                      >
+                        <Reply className="w-3 h-3 text-rose-400" />
+                        <span>রিপ্লাই</span>
+                      </button>
+
+                      {/* Quick Reactions */}
+                      <div className="flex items-center gap-0.5">
+                        {['❤️', '😘', '🥰', '🌹'].map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => onReactMessage(msg.id, emoji)}
+                            className="hover:scale-125 transition-transform p-0.5 text-xs cursor-pointer"
+                            title={`React ${emoji}`}
+                          >
+                            {emoji}
+                          </button>
                         ))}
                       </div>
-                    )}
 
-                    {/* Fallback single imageUrl if images array not populated */}
-                    {(!msg.images || msg.images.length === 0) && msg.imageUrl && (
-                      <div
-                        onClick={() => setLightboxImage(msg.imageUrl!)}
-                        className="mb-2.5 relative group/img overflow-hidden rounded-xl bg-stone-950 aspect-video max-h-60 cursor-zoom-in"
-                      >
-                        <img
-                          src={msg.imageUrl}
-                          alt="Attachment"
-                          className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                          <Maximize2 className="w-4 h-4 text-white drop-shadow" />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Text Message Content */}
-                    {msg.text && (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words font-sans">
-                        {msg.text}
-                      </p>
-                    )}
-
-                    {/* Reactions Bar inside bubble */}
-                    {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1 mt-2.5 pt-2 border-t border-white/10">
-                        {Object.entries(msg.reactions).map(([emoji, count]) =>
-                          count > 0 ? (
-                            <button
-                              key={emoji}
-                              onClick={() => onReactMessage(msg.id, emoji)}
-                              className="px-2 py-0.5 rounded-full text-xs bg-black/30 hover:bg-black/40 border border-white/10 flex items-center gap-1 cursor-pointer transition-colors"
-                            >
-                              <span>{emoji}</span>
-                              <span className="text-[10px] font-semibold">{count}</span>
-                            </button>
-                          ) : null
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Reaction Selector (Discreet hover action) */}
-                  <div
-                    className={`flex items-center gap-1 mt-1 opacity-60 hover:opacity-100 transition-opacity ${
-                      isSenderMe ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    {['❤️', '😘', '🥰', '🌹'].map((emoji) => (
+                      {/* Delete Button */}
                       <button
-                        key={emoji}
-                        onClick={() => onReactMessage(msg.id, emoji)}
-                        className="hover:scale-125 transition-transform p-1 text-xs cursor-pointer"
-                        title={`React ${emoji}`}
+                        onClick={() => setDeletingMessageId(msg.id)}
+                        className="flex items-center gap-1 px-1.5 py-1 rounded-lg text-[11px] text-stone-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        title="মেসেজ ডিলিট করুন"
                       >
-                        {emoji}
+                        <Trash2 className="w-3 h-3 text-stone-400 hover:text-rose-400" />
+                        <span className="hidden sm:inline">ডিলিট</span>
                       </button>
-                    ))}
+                    </div>
                   </div>
-                </div>
+                </React.Fragment>
               );
             })
           )}
@@ -420,6 +561,31 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
             >
               <ImageIcon className="w-4 h-4 mb-0.5" />
               <span>আরো ছবি</span>
+            </button>
+          </div>
+        )}
+
+        {/* Active Reply Banner Preview */}
+        {replyingTo && (
+          <div className="px-4 py-2.5 bg-rose-950/40 border-t border-rose-500/30 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <CornerDownRight className="w-4 h-4 text-rose-400 flex-shrink-0" />
+              <div className="truncate">
+                <span className="font-semibold text-rose-300 mr-1.5">
+                  রিপ্লাই দিচ্ছেন {replyingTo.senderName || 'Partner'}-কে:
+                </span>
+                <span className="text-stone-300 italic">
+                  {replyingTo.text ? `"${replyingTo.text}"` : replyingTo.imageUrl ? '📷 [ছবি]' : ''}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={handleCancelReply}
+              className="p-1 rounded-lg text-stone-400 hover:text-stone-100 hover:bg-stone-800 transition-colors cursor-pointer flex-shrink-0 flex items-center gap-1 text-[11px]"
+              title="রিপ্লাই বাতিল করুন"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>বাতিল</span>
             </button>
           </div>
         )}
@@ -496,11 +662,14 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
             {/* Main Text Area */}
             <div className="flex-1 relative">
               <textarea
+                ref={textareaRef}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={
-                  activeSenderRole === 'wife'
+                  replyingTo
+                    ? `${replyingTo.senderName}-এর বার্তার রিপ্লাই লিখুন...`
+                    : activeSenderRole === 'wife'
                     ? `${husbandName}-এর জন্য মিষ্টি কোনো কথা লিখুন...`
                     : `${wifeName}-এর উদ্দেশ্যে ভালোবাসার বার্তা লিখুন...`
                 }
@@ -557,6 +726,52 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
               alt="Expanded Memory"
               className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl border border-stone-800"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingMessageId && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setDeletingMessageId(null)}
+        >
+          <div
+            className="bg-stone-900 border border-stone-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-serif text-stone-100 font-medium">মেসেজ ডিলিট করতে চান?</h3>
+                <p className="text-xs text-stone-400">এটি ক্লাউড চ্যাট থেকে মুছে যাবে।</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingMessageId(null)}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-stone-400 hover:text-stone-200 hover:bg-stone-800 transition-colors cursor-pointer"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (deletingMessageId) {
+                    onDeleteMessage(deletingMessageId);
+                    setDeletingMessageId(null);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-medium bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-950/50 transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>হ্যাঁ, ডিলিট করুন</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -95,6 +95,15 @@ export interface LoveMessage {
   imageUrl?: string;
   images?: string[];
   createdAt: string;
+  timestamp: number;
+  displayTime?: string;
   reactions?: { [emoji: string]: number };
+  replyTo?: {
+    id: string;
+    senderName: string;
+    senderRole?: 'husband' | 'wife';
+    text?: string;
+    imageUrl?: string;
+  };
 }
 

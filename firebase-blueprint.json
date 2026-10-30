@@ -113,7 +113,9 @@
         "text": { "type": "string" },
         "imageUrl": { "type": "string" },
         "images": { "type": "array", "items": { "type": "string" } },
-        "createdAt": { "type": "string" }
+        "createdAt": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "replyTo": { "type": "object" }
       },
       "required": ["id", "senderRole", "senderName", "createdAt"]
     }

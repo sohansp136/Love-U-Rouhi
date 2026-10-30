@@ -123,7 +123,12 @@ export default function App() {
   const [messages, setMessages] = useState<LoveMessage[]>(() => {
     try {
       const saved = localStorage.getItem('anniversary_love_messages');
-      return saved ? JSON.parse(saved) : initialLoveMessages;
+      if (saved) {
+        const parsed: LoveMessage[] = JSON.parse(saved);
+        parsed.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        return parsed;
+      }
+      return initialLoveMessages;
     } catch {
       return initialLoveMessages;
     }
@@ -464,15 +469,21 @@ export default function App() {
   };
 
   // Couples Messenger handlers
-  const handleSendMessage = (msg: Omit<LoveMessage, 'id' | 'createdAt'>) => {
-    const timeFormatted =
-      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' • Today';
+  const handleSendMessage = (msg: Omit<LoveMessage, 'id' | 'createdAt' | 'timestamp'>) => {
+    const now = Date.now();
+    const timeFormatted = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newMsg: LoveMessage = {
       ...msg,
-      id: `msg-${Date.now()}`,
-      createdAt: timeFormatted
+      id: `msg-${now}-${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: new Date(now).toISOString(),
+      timestamp: now,
+      displayTime: timeFormatted
     };
-    setMessages((prev) => [...prev, newMsg]);
+    setMessages((prev) => {
+      const updated = [...prev, newMsg];
+      updated.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      return updated;
+    });
     addLoveMessageToFirestore(newMsg).catch((e) => console.error(e));
   };
 
