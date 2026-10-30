@@ -45,32 +45,42 @@ const ROMANTIC_EMOJIS = ['❤️', '💖', '😘', '🥰', '🌹', '💌', '💍
 /**
  * Formats a message timestamp into human-readable Bengali/English format
  */
-function formatMessageTime(timestamp: number): string {
-  if (!timestamp) return '';
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function formatMessageTime(timestamp?: number): string {
+  if (!timestamp || isNaN(timestamp) || !isFinite(timestamp)) return '';
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
 }
 
 /**
  * Formats date for grouping headers
  */
-function formatDayHeader(timestamp: number): string {
-  if (!timestamp) return 'আজকে';
-  const messageDate = new Date(timestamp);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+function formatDayHeader(timestamp?: number): string {
+  if (!timestamp || isNaN(timestamp) || !isFinite(timestamp)) return 'আজকে • Today';
+  try {
+    const messageDate = new Date(timestamp);
+    if (isNaN(messageDate.getTime())) return 'আজকে • Today';
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
 
-  if (messageDate.toDateString() === today.toDateString()) {
+    if (messageDate.toDateString() === today.toDateString()) {
+      return 'আজকে • Today';
+    } else if (messageDate.toDateString() === yesterday.toDateString()) {
+      return 'গতকাল • Yesterday';
+    } else {
+      return messageDate.toLocaleDateString('bn-BD', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+  } catch {
     return 'আজকে • Today';
-  } else if (messageDate.toDateString() === yesterday.toDateString()) {
-    return 'গতকাল • Yesterday';
-  } else {
-    return messageDate.toLocaleDateString('bn-BD', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
   }
 }
 
@@ -181,11 +191,9 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
   };
 
   // Send message
-  const handleSend = () => {
+  const handleSend = async () => {
     const trimmed = inputText.trim();
     if (!trimmed && selectedImages.length === 0) return;
-
-    setIsSending(true);
 
     const senderName = activeSenderRole === 'wife' ? wifeName : husbandName;
     const recipientName = activeSenderRole === 'wife' ? husbandName : wifeName;
@@ -200,22 +208,33 @@ export const CoupleMessenger: React.FC<CoupleMessengerProps> = ({
         }
       : undefined;
 
-    onSendMessage({
-      senderRole: activeSenderRole,
-      senderName,
-      recipientName,
-      text: trimmed || undefined,
-      imageUrl: selectedImages[0] || undefined,
-      images: selectedImages.length > 0 ? selectedImages : undefined,
-      reactions: {},
-      replyTo: replyPayload
-    });
+    const textToSend = trimmed;
+    const imagesToSend = [...selectedImages];
 
+    // Optimistically reset inputs for crisp, responsive user feedback
     setInputText('');
     setSelectedImages([]);
     setReplyingTo(null);
     setShowEmojiPicker(false);
-    setIsSending(false);
+
+    try {
+      setIsSending(true);
+      await onSendMessage({
+        senderRole: activeSenderRole,
+        senderName,
+        recipientName,
+        text: textToSend || undefined,
+        imageUrl: imagesToSend[0] || undefined,
+        images: imagesToSend.length > 0 ? imagesToSend : undefined,
+        reactions: {},
+        replyTo: replyPayload
+      });
+      setTimeout(() => scrollToBottom('smooth'), 80);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

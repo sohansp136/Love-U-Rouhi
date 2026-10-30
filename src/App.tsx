@@ -469,22 +469,34 @@ export default function App() {
   };
 
   // Couples Messenger handlers
-  const handleSendMessage = (msg: Omit<LoveMessage, 'id' | 'createdAt' | 'timestamp'>) => {
-    const now = Date.now();
-    const timeFormatted = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const handleSendMessage = async (msg: Omit<LoveMessage, 'id' | 'createdAt' | 'timestamp'>) => {
+    const systemNow = Date.now();
+    let safeTimestamp = systemNow;
+    if (messages.length > 0) {
+      const maxExistingTs = Math.max(...messages.map((m) => (typeof m.timestamp === 'number' && !isNaN(m.timestamp) ? m.timestamp : 0)));
+      if (maxExistingTs >= safeTimestamp) {
+        safeTimestamp = maxExistingTs + 1000;
+      }
+    }
+    const timeFormatted = new Date(safeTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newMsg: LoveMessage = {
       ...msg,
-      id: `msg-${now}-${Math.random().toString(36).substring(2, 7)}`,
-      createdAt: new Date(now).toISOString(),
-      timestamp: now,
+      id: `msg-${safeTimestamp}-${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: new Date(safeTimestamp).toISOString(),
+      timestamp: safeTimestamp,
       displayTime: timeFormatted
     };
     setMessages((prev) => {
-      const updated = [...prev, newMsg];
+      const filtered = prev.filter((m) => m.id !== newMsg.id);
+      const updated = [...filtered, newMsg];
       updated.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
       return updated;
     });
-    addLoveMessageToFirestore(newMsg).catch((e) => console.error(e));
+    try {
+      await addLoveMessageToFirestore(newMsg);
+    } catch (e) {
+      console.error('Failed to sync love message to Firestore:', e);
+    }
   };
 
   const handleDeleteMessage = (id: string) => {

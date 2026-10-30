@@ -252,41 +252,74 @@ export function initFirebaseRealtimeSync(callbacks: FirebaseSyncCallbacks) {
   });
   unsubscribers.push(unsubBucket);
 
+function parseTimestampSafely(item: any, docId: string): number {
+  if (typeof item.timestamp === 'number' && !isNaN(item.timestamp) && isFinite(item.timestamp)) {
+    return item.timestamp;
+  }
+  if (item.serverTime?.toMillis && typeof item.serverTime.toMillis === 'function') {
+    const millis = item.serverTime.toMillis();
+    if (!isNaN(millis) && isFinite(millis)) return millis;
+  }
+  if (item.createdAt && typeof item.createdAt === 'string') {
+    const parsed = new Date(item.createdAt).getTime();
+    if (!isNaN(parsed) && isFinite(parsed)) return parsed;
+  }
+  const match = docId.match(/\d{12,15}/);
+  if (match) {
+    const idTs = parseInt(match[0], 10);
+    if (!isNaN(idTs) && isFinite(idTs)) return idTs;
+  }
+  return Date.now();
+}
+
+function parseCreatedAtSafely(item: any, ts: number): string {
+  if (item.createdAt && typeof item.createdAt === 'string') {
+    const parsed = new Date(item.createdAt).getTime();
+    if (!isNaN(parsed) && isFinite(parsed)) {
+      return new Date(parsed).toISOString();
+    }
+  }
+  return new Date(ts).toISOString();
+}
+
   // 8. Love Messages (Couples Realtime Messenger) Listener
   const messagesCol = collection(db, 'love_messages');
   const unsubMessages = onSnapshot(messagesCol, (snap) => {
-    const list: LoveMessage[] = snap.docs.map((d) => {
-      const item = d.data();
-      const rawTs = item.timestamp;
-      const ts = typeof rawTs === 'number'
-        ? rawTs
-        : (item.serverTime?.toMillis ? item.serverTime.toMillis() : (item.createdAt ? new Date(item.createdAt).getTime() : 0));
+    try {
+      const list: LoveMessage[] = snap.docs.map((d) => {
+        const item = d.data();
+        const ts = parseTimestampSafely(item, d.id);
+        const createdAt = parseCreatedAtSafely(item, ts);
+        const displayTime = item.displayTime || new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      return {
-        id: item.id || d.id,
-        senderRole: item.senderRole || 'husband',
-        senderName: item.senderName || '',
-        recipientName: item.recipientName || '',
-        text: item.text || '',
-        imageUrl: item.imageUrl || '',
-        images: item.images || (item.imageUrl ? [item.imageUrl] : []),
-        createdAt: item.createdAt || new Date(ts || Date.now()).toISOString(),
-        timestamp: ts || Date.now(),
-        displayTime: item.displayTime || '',
-        reactions: item.reactions || {},
-        replyTo: item.replyTo ? {
-          id: item.replyTo.id || '',
-          senderName: item.replyTo.senderName || '',
-          senderRole: item.replyTo.senderRole || 'husband',
-          text: item.replyTo.text || '',
-          imageUrl: item.replyTo.imageUrl || ''
-        } : undefined
-      };
-    });
-    // Sort strictly chronologically ascending (earliest messages first, newer at bottom)
-    list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-    callbacks.onLoveMessagesChange?.(list);
-    callbacks.onStatusChange({ isConnected: true, isSyncing: false, lastSyncedAt: new Date() });
+        return {
+          id: item.id || d.id,
+          senderRole: item.senderRole || 'husband',
+          senderName: item.senderName || '',
+          recipientName: item.recipientName || '',
+          text: item.text || '',
+          imageUrl: item.imageUrl || '',
+          images: item.images || (item.imageUrl ? [item.imageUrl] : []),
+          createdAt,
+          timestamp: ts,
+          displayTime,
+          reactions: item.reactions || {},
+          replyTo: item.replyTo ? {
+            id: item.replyTo.id || '',
+            senderName: item.replyTo.senderName || '',
+            senderRole: item.replyTo.senderRole || 'husband',
+            text: item.replyTo.text || '',
+            imageUrl: item.replyTo.imageUrl || ''
+          } : undefined
+        };
+      });
+      // Sort strictly chronologically ascending (earliest messages first, newer at bottom)
+      list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      callbacks.onLoveMessagesChange?.(list);
+      callbacks.onStatusChange({ isConnected: true, isSyncing: false, lastSyncedAt: new Date() });
+    } catch (parseError) {
+      console.error('Error parsing love_messages snapshot:', parseError);
+    }
   }, (err) => {
     handleFirestoreError(err, OperationType.GET, 'love_messages');
   });
