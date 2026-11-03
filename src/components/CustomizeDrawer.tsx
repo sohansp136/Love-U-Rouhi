@@ -14,6 +14,7 @@ interface CustomizeDrawerProps {
   onExportData?: () => void;
   onImportData?: (file: File) => void;
   onOpenFirebase?: () => void;
+  onLockApp?: () => void;
 }
 
 export const CustomizeDrawer: React.FC<CustomizeDrawerProps> = ({
@@ -25,7 +26,8 @@ export const CustomizeDrawer: React.FC<CustomizeDrawerProps> = ({
   onReplayOpening,
   onExportData,
   onImportData,
-  onOpenFirebase
+  onOpenFirebase,
+  onLockApp
 }) => {
   const [formData, setFormData] = useState<CoupleProfile>({ ...profile });
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -351,41 +353,79 @@ export const CustomizeDrawer: React.FC<CustomizeDrawerProps> = ({
             )}
           </div>
 
-          {/* Husband Security PIN & Privacy Lock */}
-          <div className="pt-4 border-t border-stone-800 space-y-3">
+          {/* Privacy Passcode & Security Settings */}
+          <div className="pt-4 border-t border-stone-800 space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="text-[11px] uppercase tracking-wider text-stone-400 font-semibold flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-rose-400" />
-                <span>Husband Security PIN (Privacy Lock)</span>
+                <span>নিরাপত্তা ও পাসকোড সেটিংস</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium">
-                Active Protection
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" />
+                <span>লক সক্রিয়</span>
               </span>
             </div>
 
             <p className="text-[11px] text-stone-400 leading-relaxed font-light">
-              Your wife will be locked strictly into Wife View. She cannot access Husband Controls, view ideas, or edit memories without this secret 4-digit PIN.
+              আপনারা ছাড়া অন্য কেউ যাতে লিংকে প্রবেশ করতে না পারে, তার জন্য এই পাসকোড ও রিকভারি ইমেইল ব্যবহৃত হয়।
             </p>
 
+            {/* Passcode input */}
             <div>
               <label className="block text-[11px] text-stone-300 font-medium mb-1">
-                4-Digit Secret Passcode
+                গোপন পাসকোড (৪-৬ ডিজিট)
               </label>
               <input
                 type="text"
                 maxLength={6}
-                value={formData.husbandPin || '2024'}
+                value={formData.securityPasscode || formData.husbandPin || '2024'}
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '');
-                  setFormData({ ...formData, husbandPin: val });
+                  setFormData({
+                    ...formData,
+                    securityPasscode: val,
+                    husbandPin: val,
+                    isSecuritySetupDone: true
+                  });
                 }}
                 className="w-full px-4 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-stone-100 text-sm tracking-widest font-mono focus:outline-none focus:border-rose-500"
                 placeholder="2024"
               />
-              <span className="text-[10px] text-stone-500 mt-1 block">
-                Default: 2024. Save changes below to update.
+            </div>
+
+            {/* Recovery Email */}
+            <div>
+              <label className="block text-[11px] text-stone-300 font-medium mb-1">
+                পাসকোড রিকভারি ইমেইল (Email OTP)
+              </label>
+              <input
+                type="email"
+                value={formData.recoveryEmail || 'sohansp136@gmail.com'}
+                onChange={(e) => {
+                  setFormData({ ...formData, recoveryEmail: e.target.value.trim() });
+                }}
+                className="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-800 text-stone-100 text-xs focus:outline-none focus:border-rose-500"
+                placeholder="sohansp136@gmail.com"
+              />
+              <span className="text-[10px] text-stone-500 mt-0.5 block">
+                পাসকোড ভুলে গেলে এই ইমেইলে ওটিপি কোড পাঠানো হবে।
               </span>
             </div>
+
+            {/* Lock Website Now button */}
+            {onLockApp && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onLockApp();
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-stone-950 hover:bg-stone-800 border border-stone-800 text-rose-300 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Lock className="w-3.5 h-3.5 text-rose-400" />
+                <span>এখনই ওয়েবসাইট লক করুন (Lock Screen)</span>
+              </button>
+            )}
           </div>
 
           {/* Replay Opening & Hand-Over Mode */}

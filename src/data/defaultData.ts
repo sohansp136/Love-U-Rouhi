@@ -26,7 +26,12 @@ export const initialProfile: CoupleProfile = {
   heroPhotoUrl: HERO_IMAGE,
   romanticQuote: 'In all the world, there is no heart for me like yours. In all the world, there is no love for you like mine.',
   quoteAuthor: 'Maya Angelou',
-  husbandPin: '2024'
+  husbandPin: '2024',
+  isSecuritySetupDone: false,
+  securityPasscode: '2024',
+  recoveryEmail: 'sohansp136@gmail.com',
+  recoverySecurityQuestion: 'আমাদের শুভ পরিণয়ের বিশেষ তারিখ কোনটি?',
+  recoverySecurityAnswer: '18 October'
 };
 
 // Clean starting memories list

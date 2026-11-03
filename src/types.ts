@@ -12,6 +12,12 @@ export interface CoupleProfile {
   husbandPin?: string;
   boardWallTheme?: string;
   boardCustomBgUrl?: string;
+  // Security Gatekeeper & Email Recovery
+  isSecuritySetupDone?: boolean;
+  securityPasscode?: string;
+  recoveryEmail?: string;
+  recoverySecurityQuestion?: string;
+  recoverySecurityAnswer?: string;
 }
 
 export type MemoryCategory = 'all' | 'firsts' | 'adventures' | 'milestones' | 'everyday';

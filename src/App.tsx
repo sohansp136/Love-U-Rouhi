@@ -39,6 +39,7 @@ import { BucketList } from './components/BucketList';
 import { CustomizeDrawer } from './components/CustomizeDrawer';
 import { FirebaseModal } from './components/FirebaseModal';
 import { HusbandPinModal } from './components/HusbandPinModal';
+import { SecurityGatekeeperModal } from './components/SecurityGatekeeperModal';
 import { Footer } from './components/Footer';
 
 // Firebase Sync & Realtime Services
@@ -146,6 +147,12 @@ export default function App() {
     lastSyncedAt: null
   });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  // Gatekeeper Passcode Lock State (Option 2)
+  const [isAppUnlocked, setIsAppUnlocked] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('couple_app_unlocked') === 'true';
+  });
 
   // Husband PIN & Security Lock Modal
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -308,6 +315,19 @@ export default function App() {
     } catch (e) {
       console.error('Firestore save profile error:', e);
     }
+  };
+
+  const handleLockApp = () => {
+    sessionStorage.removeItem('couple_app_unlocked');
+    setIsAppUnlocked(false);
+  };
+
+  const handleUpdateSecurityProfile = async (updated: Partial<CoupleProfile>) => {
+    const merged: CoupleProfile = {
+      ...profile,
+      ...updated
+    };
+    await handleUpdateProfile(merged);
   };
 
   const handleAddMemory = (newMemory: Omit<MemoryItem, 'id'>) => {
@@ -574,6 +594,7 @@ export default function App() {
         onReplayOpening={() => setIsEnvelopeOpen(false)}
         onOpenFirebase={() => setIsFirebaseModalOpen(true)}
         isFirebaseConnected={firebaseStatus.isConnected}
+        onLockApp={handleLockApp}
       />
 
       {/* Main Page Content */}
@@ -676,6 +697,7 @@ export default function App() {
         onExportData={handleExportData}
         onImportData={handleImportData}
         onOpenFirebase={() => setIsFirebaseModalOpen(true)}
+        onLockApp={handleLockApp}
       />
 
       {/* Firebase Cloud Sync & Wife Access Modal */}
@@ -696,9 +718,17 @@ export default function App() {
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
         onSuccess={handlePinUnlockSuccess}
-        currentPin={profile.husbandPin || '2024'}
+        currentPin={profile.securityPasscode || profile.husbandPin || '2024'}
         wifeName={profile.wifeName}
         husbandName={profile.husbandName}
+      />
+
+      {/* Security Gatekeeper (First-Time Setup Screen + Entry Passcode Lock + Email OTP Recovery) */}
+      <SecurityGatekeeperModal
+        profile={profile}
+        isUnlocked={isAppUnlocked}
+        onUnlock={() => setIsAppUnlocked(true)}
+        onUpdateSecurityProfile={handleUpdateSecurityProfile}
       />
 
     </div>

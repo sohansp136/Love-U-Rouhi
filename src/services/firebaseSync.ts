@@ -140,7 +140,12 @@ export function initFirebaseRealtimeSync(callbacks: FirebaseSyncCallbacks) {
         romanticQuote: data.romanticQuote || initialProfile.romanticQuote,
         quoteAuthor: data.quoteAuthor || initialProfile.quoteAuthor,
         boardWallTheme: data.boardWallTheme || 'corkboard',
-        boardCustomBgUrl: data.boardCustomBgUrl || ''
+        boardCustomBgUrl: data.boardCustomBgUrl || '',
+        isSecuritySetupDone: data.isSecuritySetupDone !== undefined ? data.isSecuritySetupDone : false,
+        securityPasscode: data.securityPasscode || data.husbandPin || '2024',
+        recoveryEmail: data.recoveryEmail || 'sohansp136@gmail.com',
+        recoverySecurityQuestion: data.recoverySecurityQuestion || 'আমাদের শুভ পরিণয়ের বিশেষ তারিখ কোনটি?',
+        recoverySecurityAnswer: data.recoverySecurityAnswer || '18 October'
       });
       callbacks.onStatusChange({
         isConnected: true,
@@ -455,6 +460,11 @@ export async function saveProfileToFirestore(profile: CoupleProfile) {
       husbandPin: profile.husbandPin || '2024',
       boardWallTheme: profile.boardWallTheme || 'corkboard',
       boardCustomBgUrl: profile.boardCustomBgUrl || '',
+      isSecuritySetupDone: profile.isSecuritySetupDone !== undefined ? profile.isSecuritySetupDone : false,
+      securityPasscode: profile.securityPasscode || profile.husbandPin || '2024',
+      recoveryEmail: profile.recoveryEmail || 'sohansp136@gmail.com',
+      recoverySecurityQuestion: profile.recoverySecurityQuestion || 'আমাদের শুভ পরিণয়ের বিশেষ তারিখ কোনটি?',
+      recoverySecurityAnswer: profile.recoverySecurityAnswer || '18 October',
       updatedAt: serverTimestamp()
     };
 

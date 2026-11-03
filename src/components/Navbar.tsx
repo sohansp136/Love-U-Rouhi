@@ -29,6 +29,7 @@ interface NavbarProps {
   onReplayOpening: () => void;
   onOpenFirebase?: () => void;
   isFirebaseConnected?: boolean;
+  onLockApp?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -43,7 +44,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCustomize,
   onReplayOpening,
   onOpenFirebase,
-  isFirebaseConnected = true
+  isFirebaseConnected = true,
+  onLockApp
 }) => {
   const isWife = currentRole === 'wife';
 
@@ -205,6 +207,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Lock className="w-3.5 h-3.5" />
               </button>
             )
+          )}
+
+          {/* Gatekeeper Lock Button (Instantly lock screen) */}
+          {onLockApp && (
+            <button
+              onClick={onLockApp}
+              className="p-2 rounded-xl text-stone-400 hover:text-rose-400 hover:bg-stone-800 transition-colors cursor-pointer"
+              title="ওয়েবসাইট লক করুন (Lock Screen)"
+            >
+              <Lock className="w-4 h-4 text-stone-400 hover:text-rose-400" />
+            </button>
           )}
         </div>
 
