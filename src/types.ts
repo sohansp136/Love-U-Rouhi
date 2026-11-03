@@ -10,6 +10,8 @@ export interface CoupleProfile {
   romanticQuote: string;
   quoteAuthor: string;
   husbandPin?: string;
+  boardWallTheme?: string;
+  boardCustomBgUrl?: string;
 }
 
 export type MemoryCategory = 'all' | 'firsts' | 'adventures' | 'milestones' | 'everyday';

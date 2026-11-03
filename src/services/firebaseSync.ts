@@ -138,7 +138,9 @@ export function initFirebaseRealtimeSync(callbacks: FirebaseSyncCallbacks) {
         heroSubheadline: data.heroSubheadline || initialProfile.heroSubheadline,
         heroPhotoUrl: data.heroPhotoUrl || initialProfile.heroPhotoUrl,
         romanticQuote: data.romanticQuote || initialProfile.romanticQuote,
-        quoteAuthor: data.quoteAuthor || initialProfile.quoteAuthor
+        quoteAuthor: data.quoteAuthor || initialProfile.quoteAuthor,
+        boardWallTheme: data.boardWallTheme || 'corkboard',
+        boardCustomBgUrl: data.boardCustomBgUrl || ''
       });
       callbacks.onStatusChange({
         isConnected: true,
@@ -451,6 +453,8 @@ export async function saveProfileToFirestore(profile: CoupleProfile) {
       romanticQuote: profile.romanticQuote || initialProfile.romanticQuote,
       quoteAuthor: profile.quoteAuthor || initialProfile.quoteAuthor,
       husbandPin: profile.husbandPin || '2024',
+      boardWallTheme: profile.boardWallTheme || 'corkboard',
+      boardCustomBgUrl: profile.boardCustomBgUrl || '',
       updatedAt: serverTimestamp()
     };
 

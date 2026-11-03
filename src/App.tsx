@@ -595,6 +595,7 @@ export default function App() {
           onAddNote={handleAddStickyNote}
           onDeleteNote={handleDeleteStickyNote}
           onToggleHeart={handleToggleStickyNoteHeart}
+          onUpdateProfile={handleUpdateProfile}
         />
 
         {/* Section 1: Our Story Timeline Scrapbook */}
