@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-script: 'Caveat', cursive;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    font-family: var(--font-sans);
+    background-color: #0c0a09;
+    color: #f5f5f4;
+    overflow-x: hidden;
+    selection-background-color: #f43f5e;
+    selection-color: #ffffff;
+  }
+}
+
+.font-serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+.font-handwriting {
+  font-family: 'Caveat', cursive;
+}
+
+.font-sans {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* Custom romantic parchment paper background */
+.parchment-bg {
+  background-color: #fdfbf7;
+  background-image: radial-gradient(#e5dfd3 0.75px, transparent 0.75px);
+  background-size: 16px 16px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1c1917;
+}
+::-webkit-scrollbar-thumb {
+  background: #44403c;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #78716c;
+}
