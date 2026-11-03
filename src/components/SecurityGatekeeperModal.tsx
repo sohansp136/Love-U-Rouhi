@@ -79,7 +79,7 @@ export const SecurityGatekeeperModal: React.FC<SecurityGatekeeperModalProps> = (
   const [isRecovering, setIsRecovering] = useState(false);
   const [demoOtpNotification, setDemoOtpNotification] = useState<string | null>(null);
 
-  const correctPin = profile.securityPasscode || profile.husbandPin || '2024';
+  const correctPin = profile.securityPasscode || '1810';
   const targetEmail = profile.recoveryEmail || 'sohansp136@gmail.com';
 
   // Keyboard listener for PIN entry
@@ -141,7 +141,6 @@ export const SecurityGatekeeperModal: React.FC<SecurityGatekeeperModalProps> = (
       await onUpdateSecurityProfile({
         isSecuritySetupDone: true,
         securityPasscode: cleanPass,
-        husbandPin: cleanPass, // sync with husbandPin as well
         recoveryEmail: setupEmail.trim(),
         recoverySecurityQuestion: setupQuestion,
         recoverySecurityAnswer: setupAnswer.trim()
@@ -259,8 +258,7 @@ export const SecurityGatekeeperModal: React.FC<SecurityGatekeeperModalProps> = (
     setIsRecovering(true);
     try {
       await onUpdateSecurityProfile({
-        securityPasscode: cleanNew,
-        husbandPin: cleanNew
+        securityPasscode: cleanNew
       });
 
       sessionStorage.setItem('couple_app_unlocked', 'true');

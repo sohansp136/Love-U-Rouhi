@@ -28,7 +28,7 @@ export const initialProfile: CoupleProfile = {
   quoteAuthor: 'Maya Angelou',
   husbandPin: '2024',
   isSecuritySetupDone: false,
-  securityPasscode: '2024',
+  securityPasscode: '1810',
   recoveryEmail: 'sohansp136@gmail.com',
   recoverySecurityQuestion: 'আমাদের শুভ পরিণয়ের বিশেষ তারিখ কোনটি?',
   recoverySecurityAnswer: '18 October'

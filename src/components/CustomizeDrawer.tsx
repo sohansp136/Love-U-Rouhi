@@ -370,27 +370,53 @@ export const CustomizeDrawer: React.FC<CustomizeDrawerProps> = ({
               আপনারা ছাড়া অন্য কেউ যাতে লিংকে প্রবেশ করতে না পারে, তার জন্য এই পাসকোড ও রিকভারি ইমেইল ব্যবহৃত হয়।
             </p>
 
-            {/* Passcode input */}
+            {/* 1. App Entrance Gatekeeper Passcode */}
             <div>
               <label className="block text-[11px] text-stone-300 font-medium mb-1">
-                গোপন পাসকোড (৪-৬ ডিজিট)
+                ১. ওয়েবসাইট প্রবেশ পাসকোড (Sohan & Rouhi Entrance PIN)
               </label>
               <input
                 type="text"
                 maxLength={6}
-                value={formData.securityPasscode || formData.husbandPin || '2024'}
+                value={formData.securityPasscode || '1810'}
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '');
                   setFormData({
                     ...formData,
                     securityPasscode: val,
-                    husbandPin: val,
                     isSecuritySetupDone: true
+                  });
+                }}
+                className="w-full px-4 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-stone-100 text-sm tracking-widest font-mono focus:outline-none focus:border-rose-500"
+                placeholder="1810"
+              />
+              <span className="text-[10px] text-stone-500 mt-0.5 block">
+                এই পাসকোড দিয়ে আপনারা দুজনেই ওয়েবসাইটে প্রবেশ করতে পারবেন (Default: 1810)।
+              </span>
+            </div>
+
+            {/* 2. Husband Admin Control PIN */}
+            <div>
+              <label className="block text-[11px] text-stone-300 font-medium mb-1">
+                ২. স্বামী সোহানের গোপন অ্যাডমিন পিন (Husband Admin PIN)
+              </label>
+              <input
+                type="text"
+                maxLength={6}
+                value={formData.husbandPin || '2024'}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  setFormData({
+                    ...formData,
+                    husbandPin: val
                   });
                 }}
                 className="w-full px-4 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-stone-100 text-sm tracking-widest font-mono focus:outline-none focus:border-rose-500"
                 placeholder="2024"
               />
+              <span className="text-[10px] text-stone-500 mt-0.5 block">
+                এই পিন দিয়ে শুধুমাত্র স্বামী সোহান কাস্টমাইজেশন ও আইডিয়াস এক্সেস করতে পারবেন (Default: 2024)।
+              </span>
             </div>
 
             {/* Recovery Email */}
@@ -408,7 +434,7 @@ export const CustomizeDrawer: React.FC<CustomizeDrawerProps> = ({
                 placeholder="sohansp136@gmail.com"
               />
               <span className="text-[10px] text-stone-500 mt-0.5 block">
-                পাসকোড ভুলে গেলে এই ইমেইলে ওটিপি কোড পাঠানো হবে।
+                প্রবেশ পাসকোড ভুলে গেলে এই ইমেইলে ওটিপি কোড পাঠানো হবে।
               </span>
             </div>
 
