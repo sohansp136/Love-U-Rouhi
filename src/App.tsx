@@ -718,17 +718,24 @@ export default function App() {
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
         onSuccess={handlePinUnlockSuccess}
-        currentPin={profile.securityPasscode || profile.husbandPin || '2024'}
+        currentPin={profile.husbandPin || '2024'}
         wifeName={profile.wifeName}
         husbandName={profile.husbandName}
       />
 
-      {/* Security Gatekeeper (First-Time Setup Screen + Entry Passcode Lock + Email OTP Recovery) */}
+      {/* Security Gatekeeper (First-Time Setup Screen + Role Selection Login + Email OTP Recovery) */}
       <SecurityGatekeeperModal
         profile={profile}
         isUnlocked={isAppUnlocked}
-        onUnlock={() => setIsAppUnlocked(true)}
+        onUnlock={(role) => {
+          setCurrentRole(role);
+          try {
+            localStorage.setItem('anniversary_role', role);
+          } catch {}
+          setIsAppUnlocked(true);
+        }}
         onUpdateSecurityProfile={handleUpdateSecurityProfile}
+        currentRole={currentRole}
       />
 
     </div>
